@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Tarik Tambang Elektron</title>
+<title>Tarik Tambang Elektron-DAT Novitasari</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600;700&display=swap">
@@ -34,6 +34,12 @@ h1 .e{display:inline-block;width:.32em;height:.32em;border-radius:50%;background
 .tabs{display:flex;gap:4px;padding:5px;background:var(--glass);border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(8px)}
 .tabs button{border:0;background:transparent;padding:9px 18px;border-radius:999px;cursor:pointer;font-weight:700;color:var(--muted);transition:color .2s,background .2s,box-shadow .2s}
 .tabs button[aria-selected="true"]{background:rgba(255,255,255,.08);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2),0 0 20px rgba(54,224,255,.12)}
+.hdr-r{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.sound{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--glass);border-radius:999px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:14px;color:var(--ink);transition:box-shadow .2s,border-color .2s}
+.sound svg{width:18px;height:18px}
+.sound[aria-pressed="true"]{border-color:rgba(255,228,107,.6);box-shadow:0 0 18px rgba(255,228,107,.2)}
+.sound[aria-pressed="true"] .off,.sound[aria-pressed="false"] .on{display:none}
+.sound[aria-pressed="false"]{color:var(--muted)}
 .grid{display:grid;grid-template-columns:minmax(0,410px) minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:920px){.grid{grid-template-columns:1fr}.stagep{order:-1}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0;backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
@@ -142,9 +148,15 @@ footer{margin-top:10px;font-size:13px;color:var(--muted);max-width:82ch}
       <h1><span class="a">Tarik</span> Tambang <span class="e" aria-hidden="true"></span> <span class="b">Elektron</span></h1>
       <p class="lead">Dua atom, satu pasang elektron. Tebak siapa yang menang: dibagi rata, dibagi condong, atau direbut seluruhnya.</p>
     </div>
+    <div class="hdr-r">
+    <button class="sound" id="sound" aria-pressed="true" title="Nyalakan atau matikan efek suara (M)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><g class="on"><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></g><g class="off"><path d="m16 9 5 6"/><path d="m21 9-5 6"/></g></svg>
+      <span id="soundLbl">Suara nyala</span>
+    </button>
     <div class="tabs" role="tablist" aria-label="Mode">
       <button id="tab-bebas" role="tab" aria-selected="true">Mode Bebas</button>
       <button id="tab-kuis" role="tab" aria-selected="false">Kuis 10 Soal</button>
+    </div>
     </div>
   </header>
 
@@ -220,7 +232,7 @@ footer{margin-top:10px;font-size:13px;color:var(--muted);max-width:82ch}
     </section>
   </main>
 
-  <div class="keys"><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tebak</span><span><kbd>R</kbd> acak pasangan</span><span><kbd>Spasi</kbd> putar ulang</span><span><kbd>N</kbd> soal berikutnya</span><span><kbd>Esc</kbd> kosongkan pilihan</span></div>
+  <div class="keys"><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tebak</span><span><kbd>R</kbd> acak pasangan</span><span><kbd>Spasi</kbd> putar ulang</span><span><kbd>N</kbd> soal berikutnya</span><span><kbd>Esc</kbd> kosongkan pilihan</span><span><kbd>M</kbd> suara</span></div>
   <footer>Keelektronegatifan memakai skala Pauling. Batas 0,4 dan 1,7 adalah patokan yang umum dipakai di buku kimia SMA, bukan hukum mutlak. Pasangan logam–nonlogam dengan ΔEN di bawah 1,7 ditandai sebagai zona abu-abu, dan pasangan dua logam membentuk ikatan logam.</footer>
 </div>
 
@@ -332,6 +344,88 @@ const $=id=>document.getElementById(id);
 const RM=matchMedia('(prefers-reduced-motion: reduce)');
 const T1=0.9,T2=2.8,T3=3.6;
 
+/* ---------- sound (Web Audio, disintesis langsung) ---------- */
+const SND={c:null,out:null,on:true,live:new Set(),nb:null};
+try{SND.on=localStorage.getItem('tte-sound')!=='off';}catch(e){}
+function ac(){
+  if(!SND.c){
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
+    SND.c=new C();const comp=SND.c.createDynamicsCompressor();
+    SND.out=SND.c.createGain();SND.out.gain.value=0.6;SND.out.connect(comp);comp.connect(SND.c.destination);
+  }
+  if(SND.c.state==='suspended')SND.c.resume();
+  return SND.c;
+}
+function track(n,end){SND.live.add(n);n.onended=()=>SND.live.delete(n);}
+function stopAll(){SND.live.forEach(n=>{try{n.stop();}catch(e){}});SND.live.clear();}
+function tone({f=440,f2=0,type='sine',at=0,dur=.2,vol=.2,atk=.006,dest}){
+  const c=ac();if(!c||!SND.on)return;
+  const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+atk);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g);g.connect(dest||SND.out);o.start(t);o.stop(t+dur+.05);track(o);
+}
+function noise({at=0,dur=.4,vol=.2,f=800,f2=0,q=1,type='bandpass',atk=.02}){
+  const c=ac();if(!c||!SND.on)return;
+  if(!SND.nb){const b=c.createBuffer(1,c.sampleRate*2,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;SND.nb=b;}
+  const t=c.currentTime+at,src=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();
+  src.buffer=SND.nb;src.loop=true;fl.type=type;fl.Q.value=q;fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+atk);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(fl);fl.connect(g);g.connect(SND.out);src.start(t);src.stop(t+dur+.05);track(src);
+}
+function hum({at=0,dur=1.8,f=70,f2=120,vol=.14}){
+  const c=ac();if(!c||!SND.on)return;
+  const t=c.currentTime+at,lp=c.createBiquadFilter(),g=c.createGain(),trem=c.createGain(),lfo=c.createOscillator(),lg=c.createGain();
+  lp.type='lowpass';lp.frequency.setValueAtTime(300,t);lp.frequency.exponentialRampToValueAtTime(1400,t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.25);g.gain.setValueAtTime(vol,t+dur-.25);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  trem.gain.value=.65;lfo.frequency.setValueAtTime(5,t);lfo.frequency.linearRampToValueAtTime(11,t+dur);lg.gain.value=.35;
+  lfo.connect(lg);lg.connect(trem.gain);
+  lp.connect(trem);trem.connect(g);g.connect(SND.out);
+  [0,7,-6].forEach(det=>{const o=c.createOscillator();o.type='sawtooth';o.detune.value=det;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f2,t+dur);o.connect(lp);o.start(t);o.stop(t+dur+.05);track(o);});
+  lfo.start(t);lfo.stop(t+dur+.05);track(lfo);
+}
+const sPick=en=>{tone({f:260+en*110,f2:300+en*130,type:'triangle',dur:.13,vol:.16});tone({f:(260+en*110)*2,type:'sine',dur:.08,vol:.05});};
+const sUI=()=>tone({f:1100,f2:700,type:'square',dur:.045,vol:.04});
+const sThunk=()=>{tone({f:160,f2:90,type:'triangle',dur:.25,vol:.2});noise({dur:.15,vol:.06,f:500,type:'lowpass'});};
+function sRun(kind,fast){
+  if(fast){ if(kind==='ion')sBoom(0); else sChime(kind,0); return; }
+  noise({at:0,dur:T1+.1,vol:.16,f:300,f2:2400,q:.8,atk:.3});
+  hum({at:T1,dur:T2-T1+.15,f:kind==='ion'?65:75,f2:kind==='ion'?150:105,vol:.12});
+  for(let k=0;k<9;k++)tone({f:1400+Math.random()*1400,type:'square',at:T1+.15+Math.random()*(T2-T1-.3),dur:.025,vol:.025});
+  if(kind==='ion'){
+    tone({f:180,f2:1900,type:'sawtooth',at:T2,dur:T3-T2,vol:.07});
+    tone({f:360,f2:3800,type:'sine',at:T2,dur:T3-T2,vol:.05});
+    sBoom(T3);
+  } else sChime(kind,T2);
+}
+function sBoom(at){
+  tone({f:130,f2:38,type:'sine',at,dur:.8,vol:.5});
+  noise({at,dur:.7,vol:.28,f:1800,f2:160,type:'lowpass',atk:.005});
+  [1568,2093,2637].forEach((f,n)=>tone({f,type:'sine',at:at+.06+n*.07,dur:.35,vol:.05}));
+  tone({f:220,type:'sine',at:at+.4,dur:1.4,vol:.04,atk:.3});
+}
+function sChime(kind,at){
+  const set=kind==='nonpolar'?[523,784,1047]:kind==='polar'?[587,880,740]:[440,466,622];
+  set.forEach((f,n)=>tone({f,type:kind==='abu'?'triangle':'sine',at:at+n*.09,dur:.9,vol:.09}));
+}
+function sResult(right){
+  if(right===true)[523,659,784,1047].forEach((f,n)=>tone({f,type:'triangle',at:n*.075,dur:.28,vol:.14}));
+  else if(right===false){tone({f:233,f2:196,type:'square',dur:.2,vol:.06});tone({f:185,f2:150,type:'square',at:.2,dur:.3,vol:.06});}
+  else tone({f:880,type:'sine',dur:.3,vol:.08});
+}
+function sEnd(score){
+  const seq=score>=7?[523,659,784,1047,784,1047,1319]:[392,440,523,440];
+  seq.forEach((f,n)=>tone({f,type:'triangle',at:n*.11,dur:.3,vol:.13}));
+}
+function setSound(on){
+  SND.on=on;if(!on)stopAll();
+  $('sound').setAttribute('aria-pressed',on);$('soundLbl').textContent=on?'Suara nyala':'Suara mati';
+  try{localStorage.setItem('tte-sound',on?'on':'off');}catch(e){}
+  if(on)sUI();
+}
+$('sound').addEventListener('click',()=>setSound(!SND.on));
+$('sound').setAttribute('aria-pressed',SND.on);$('soundLbl').textContent=SND.on?'Suara nyala':'Suara mati';
+
 /* ---------- table ---------- */
 const pt=$('pt');
 [1,2,13,14,15,16,17].forEach(g=>{const s=document.createElement('span');s.className='gl';s.textContent=g;s.style.gridColumn=COLS[g];s.style.gridRow=1;pt.appendChild(s);});
@@ -352,9 +446,10 @@ function pick(s){
   let [a,b]=state.sel;
   if(!a)a=s; else if(!b)b=s; else {a=s;b=null;}
   setPair(a,b);
+  if(state.info&&state.info.kind==='logam')sThunk(); else sPick(BY[s].en);
 }
 function setPair(a,b,opts={}){
-  clearTimeout(state.timer);
+  clearTimeout(state.timer);stopAll();
   state.sel=[a,b];state.phase='idle';state.guess=null;
   state.info=a&&b?classify(BY[a],BY[b]):null;
   state.override=opts.override||null;
@@ -390,7 +485,7 @@ function randomPair(){
   let a,b;do{a=EL[Math.floor(Math.random()*EL.length)];b=EL[Math.floor(Math.random()*EL.length)];}while(isMetal(a)&&isMetal(b));
   setPair(a.s,b.s);
 }
-$('rand').addEventListener('click',randomPair);
+$('rand').addEventListener('click',()=>{randomPair();sUI();});
 function renderStat(){
   const st=state.stats;
   $('stat').textContent=state.mode==='bebas'&&st.n?`Sesi ini: ${st.ok} tebakan benar dari ${st.n}`:'';
@@ -399,11 +494,12 @@ function renderStat(){
 /* ---------- predict / reveal ---------- */
 document.querySelectorAll('.pbtn').forEach(p=>p.addEventListener('click',()=>reveal(p.dataset.k)));
 $('skip').addEventListener('click',()=>reveal(null));
-function replay(){if(state.phase==='idle')return;state.phase='run';state.t0=performance.now();}
+function replay(){if(state.phase==='idle')return;stopAll();state.phase='run';state.t0=performance.now();sRun(state.info.kind,RM.matches);}
 $('replay').addEventListener('click',replay);
 function reveal(guess){
   const i=state.info;if(!i||i.kind==='logam'||state.phase!=='idle')return;
   state.guess=guess;state.phase='run';state.t0=performance.now();
+  sUI();sRun(i.kind,RM.matches);
   const right=guess?i.accept.includes(guess):null;
   document.querySelectorAll('.pbtn').forEach(p=>{p.disabled=true;if(p.dataset.k===guess)p.classList.add('picked');});
   $('skip').hidden=true;
@@ -418,6 +514,7 @@ function showResult(right){
     if(i.accept.includes(p.dataset.k))p.classList.add('right');
     else if(p.dataset.k===state.guess)p.classList.add('wrong');
   });
+  sResult(right);
   const v=$('verdict');
   if(right===null){v.textContent='Jawabannya:';v.className='v-na';}
   else if(right){v.textContent='Tebakan benar!';v.className='v-ok';}
@@ -453,8 +550,8 @@ function setMode(m){
   $('hint').textContent=m==='kuis'?'Mode kuis: pasangan unsur dipilih otomatis. Pakai nilai keelektronegatifan di tabel untuk menebak.':'Klik unsur pertama, lalu unsur kedua. Klik unsur yang sama dua kali untuk ikatan sejenis, misalnya H₂.';
   if(m==='kuis')startQuiz(); else setPair('Na','Cl');
 }
-$('tab-bebas').addEventListener('click',()=>setMode('bebas'));
-$('tab-kuis').addEventListener('click',()=>setMode('kuis'));
+$('tab-bebas').addEventListener('click',()=>{setMode('bebas');sUI();});
+$('tab-kuis').addEventListener('click',()=>{setMode('kuis');sUI();});
 function startQuiz(){
   const items=shuffle([...shuffle(POOL.ion).slice(0,4),...shuffle(POOL.polar).slice(0,3),...shuffle(POOL.nonpolar).slice(0,3)]);
   state.quiz={items,idx:0,score:0,log:[]};
@@ -476,7 +573,7 @@ function nextQ(){
   const q=state.quiz;if(!q||$('result').hidden)return;
   if(q.idx<q.items.length-1){q.idx++;loadQ();}else endQuiz();
 }
-$('next').addEventListener('click',nextQ);
+$('next').addEventListener('click',()=>{nextQ();sUI();});
 function endQuiz(){
   const q=state.quiz;
   $('playArea').hidden=true;
@@ -484,7 +581,7 @@ function endQuiz(){
   $('qend').innerHTML=`<div><p class="eyebrow">Hasil kuis</p><div class="big">${q.score}/${q.items.length}</div></div><p class="explain">${msg}</p>
   <ul class="qlist">${q.items.map((it,n)=>`<li><span class="${q.log[n]?'ok':'bad'}">${q.log[n]?'✓':'✗'}</span>${it[0]}–${it[1]} <span style="color:var(--muted)">(${it[2]})</span></li>`).join('')}</ul>
   <div class="actions"><button class="primary" id="again">Ulangi kuis</button><button class="ghost" id="tofree">Kembali ke Mode Bebas</button></div>`;
-  $('qend').hidden=false;
+  $('qend').hidden=false;sEnd(q.score);
   $('qpos').textContent='Selesai';$('qscore').textContent=`Skor ${q.score}`;
   $('qdots').innerHTML=q.items.map((_,n)=>`<i class="${q.log[n]?'ok':'bad'}"></i>`).join('');
   $('again').addEventListener('click',startQuiz);
@@ -496,7 +593,8 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   const k=e.key.toLowerCase();
   if(k==='1'||k==='2'||k==='3'){reveal(['nonpolar','polar','ion'][+k-1]);}
-  else if(k==='r'&&state.mode==='bebas'){randomPair();}
+  else if(k==='r'&&state.mode==='bebas'){randomPair();sUI();}
+  else if(k==='m'){setSound(!SND.on);}
   else if(k===' '&&!$('result').hidden&&document.activeElement.tagName!=='BUTTON'){e.preventDefault();replay();}
   else if(k==='n'&&state.mode==='kuis'){nextQ();}
   else if(k==='escape'&&state.mode==='bebas'){setPair(null,null);}
